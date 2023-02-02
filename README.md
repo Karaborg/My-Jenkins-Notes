@@ -47,7 +47,7 @@ job('<NAME_OF_THE_JOB>') {
     }
 }
 ```
-- install `Job DSL` from `Dashboad > Manage Jenkins > Manage Plugins > Available plugins`
+- Install `Job DSL` from `Dashboad > Manage Jenkins > Manage Plugins > Available plugins`
 - Restart Jenkins
 - Create new item (freestyle)
 - If your groovy file is on GIT, gave the project GIT URL as **Repository**
