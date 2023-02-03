@@ -332,12 +332,138 @@ node {
 
  > There is a check box named `Auto-register webhooks`. If enabled, Bitbucket will send notifications to Jenkins for each commit. To do that, make sure your Jenkins URL under Manage Jenkins > Configure System.
 
+### Custom API Integration
+Example:
+```
+// example of custom API
+import groovy.json.JsonSlurperClassic 
 
+@NonCPS
+def jsonParse(def json) {
+    new groovy.json.JsonSlurperClassic().parseText(json)
+}
 
+def repo = "<BITBUCKET_LOGIN>/<BITBUCKET_REPO>"
 
+def token = httpRequest authentication: 'bitbucket-oauth', contentType: 'APPLICATION_FORM', httpMode: 'POST', requestBody: 'grant_type=client_credentials', url: 'https://bitbucket.org/site/oauth2/access_token'
+def accessToken = jsonParse(token.content).access_token
+def pr = httpRequest customHeaders: [[maskValue: true, name: 'Authorization', value: 'Bearer ' + accessToken]], url: "https://api.bitbucket.org/2.0/repositories/${repo}/pullrequests"
 
+for (p in jsonParse(pr.content).values) { 
+    println(p.source.branch.name)
+}
+```
+- Install `HTTP Request Plugin` from `Dashboad > Manage Jenkins > Manage Plugins`
+- Create an `API Key`, we use **Bitbucket** for this example
+ - Go to `Bitbucket > Settings > Access Management > OAuth`
+ - Click on `Add Consumer`
+ - Give a name
+ - Put `Jenkins URL` as **Callback URL** and **URL**
+ - Give **read permissions** for **Repositories** and **Pull Requests**
+- Go to **Credentials** and add username and password from Bitbucket
+- Create a **Pipeline** item
+- Under `Pipeline`, choose `Pipeline script from SCM`
+- Under `SCM`, choose `Git`
+- Give the **Git Repository URL** as `Repository URL`
+- Give the **Jenkins file path** as `Script Path` (from the root folder of the project)
+- Go to `Dashboard > Manage Jenkins > In-Process Script Approval`
+- **Approve** the API by clicking the approve button on top Save and build
 
+### SonarQube Integration
+- `mkdir -p /jenkins/docker-compose.yaml`
+- `mkdir -p /opt/sonarqube/data/`
+- `mkdir -p /opt/sonarqube/logs/`
+- `mkdir -p /opt/sonarqube/extensions/`
+Docker-Compose Example:
+```
+version: '3.8'
+services:
+  jenkins:
+    image: jenkins/jenkins:lts
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    networks:
+      - jenkins
+    volumes:
+      - ../var/jenkins_home:/var/jenkins_home
+      - ../var/run/docker.sock:/var/run/docker.sock
+  postgres:
+    image: postgres:9.6
+    networks:
+      - jenkins
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonarpasswd
+    volumes:
+      - ../var/postgres-data:/var/lib/postgresql/data
+  sonarqube:
+    image: sonarqube:5.6.6
+    ports:
+      - "9000:9000"
+      - "9092:9092"
+      - "5432:5432"
+    networks:
+      - jenkins
+    environment:
+      SONARQUBE_JDBC_USERNAME: sonar
+      SONARQUBE_JDBC_PASSWORD: sonarpasswd
+      SONARQUBE_JDBC_URL: "jdbc:postgresql://postgres:5432/sonar"
+    volumes:
+      - ../opt/sonarqube/data:/opt/sonarqube/data
+      - ../opt/sonarqube/logs:/opt/sonarqube/logs
+      - ../opt/sonarqube/extensions:/opt/sonarqube/extensions
+    depends_on: 
+      - postgres
 
+networks:
+  jenkins:
+```
+
+- `cd jenkins && docker-compose up -d`
+- Install `SonarQube Scanner for Jenkins` from `Dashboad > Manage Jenkins > Manage Plugins`
+- Open `SonarQube`, login and **generate token**
+ - username/password is admin/admin for SonarQube
+ - Go to `Administrator > My Account > Security` and `Generate Tokens`
+- Go to `Dashboad > Manage Jenkins > Global Tool Configurations`
+- Add `SonarQube Scanner` as sonar
+- Go to `Dashboard > Manage Jenkins > Credentials`
+- Click on the **downward arrow** next to `(global)` proved by `System`
+- Choose `Secret text`
+- Enter the key you generated from SonarQube
+- Create an item as pipeline
+- Under Pipeline, select `Pipeline script from SCM`
+- Choose `Git` as SCM
+- Give the repository URL
+- Give the Jenkins file as Script Path
+
+Example Jenkins File:
+```
+node {
+    def myGradleContainer = docker.image('gradle:jdk8-alpine')
+    myGradleContainer.pull()
+
+    stage('prep') {
+        git url: '<REPOSITORY>'
+    }
+
+    stage('build') {
+      myGradleContainer.inside("-v ${env.HOME}/.gradle:/home/gradle/.gradle") {
+        sh 'cd complete && /opt/gradle/bin/gradle build'
+      }
+    }
+
+    stage('sonar-scanner') {
+      def sonarqubeScannerHome = tool name: 'sonar', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+
+      withCredentials([string(credentialsId: 'sonar', variable: 'sonarLogin')]) {
+        sh "${sonarqubeScannerHome}/bin/sonar-scanner -e -Dsonar.host.url=http://sonarqube:9000 -Dsonar.login=${sonarLogin} -Dsonar.projectName=gs-gradle -Dsonar.projectVersion=${env.BUILD_NUMBER} -Dsonar.projectKey=GS -Dsonar.sources=complete/src/main/ -Dsonar.tests=complete/src/test/ -Dsonar.language=java -Dsonar.java.binaries=."
+      }
+    }
+}
+```
+
+> Since we are using Docker-Compose, we put the ***container names*** as IP Addresses.
 
 
 ## Advanced Jenkins Usage
