@@ -139,8 +139,125 @@ node { // this project can run on any node
 }
 ```
 
+Example:
+```
+node {
+    def commit_id
+    
+    stage('Preparation') {
+        checkout scm // will make the git repository files available for jenkins
+        sh "git rev-parse --short HEAD > .git/commit-id" // gets the commit id
+        commit_id = readFile('.git/commit-id').trim()
+    }
+    
+    stage('test') {
+        nodejs(nodeJSInstallationName: 'nodejs') {
+            sh 'npm install --only=dev'
+            sh 'npm test'
+        }
+    }
+    
+    stage('docker build/push') {
+        docker.withRegistry('https://index.docker.io.v1/', 'dockerhub') { // make sure you have dockerhub credentials on jenkins with the name of dockerhub
+            def app = docker.build("<DOCKER_HUB_REPOSITORY>:${commit-id}", '.').push()
+        }
+    }
+}
+```
+
+- Create a new item
+- Choose Pipeline
+- Under Pileline, choose Pipeline script from SCM
+- Under SCM, choose Git
+- Give the Git Repository URL as Repository URL
+- Give the Jenkins file path as Script Path (from the root folder of the project)
+- Save and build
+
+You can also use Docker Pipeline plugin
+Example:
+```
+node {
+    def commit_id
+    
+    stage('Preparation') {
+        checkout scm
+        sh "git rev-parse --short HEAD > .git/commit-id"
+        commit_id = readFile('.git/commit-id').trim()
+    }
+    
+    stage('test') {
+        def myTestContainer = docker.image('node:4.6')
+        
+        myTestContainer.pull()
+        myTestContainer.inside {
+            sh 'npm install --only=dev'
+            sh 'npm test'
+        }
+    }
+    
+    stage('test with a DB') {
+        def mysql = docker.image('mysql').run("-e MYSQL_ALLOW_EMPTY_PASSWORD=yes")
+        def myTestContainer = docker.image('node:4.6')
+        
+        myTestContainer.pull()
+        myTestContainer.inside("--link ${mysql.id}:mysql") { // using link, mysql will be available at host: mysql, port:3306
+            sh 'npm install --only=dev'
+            sh 'npm test'
+        }
+        mysql.stop()
+    }
+    
+    stage('docker build/push') {
+        docker.withRegistry('https://index.docker.io.v1/', 'dockerhub') { // make sure you have dockerhub credentials on jenkins with the name of dockerhub
+            def app = docker.build("<DOCKER_HUB_REPOSITORY>:${commit-id}", '.').push()
+        } 
+    }
+}
+```
+
+- Create a new item
+- Choose Pipeline
+- Under Pileline, choose Pipeline script from SCM
+- Under SCM, choose Git
+- Give the Git Repository URL as Repository URL
+- Give the Jenkins file path as Script Path (from the root folder of the project)
+- Save and build
+
 ## Jenkins Integrations
+### Email Integration
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Advanced Jenkins Usage
 
 ## End
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
