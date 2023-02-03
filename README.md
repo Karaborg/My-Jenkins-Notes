@@ -465,8 +465,35 @@ node {
 
 > Since we are using Docker-Compose, we put the ***container names*** as IP Addresses.
 
-
 ## Advanced Jenkins Usage
+### Jenkins Slaves
+In production environments, you typically want to host the **Jenkins web UI on a small master node**, and have **one or more worker nodes** (Jenkins Slaves)
+
+Typically one worker has one or more **build executors** (building slots)
+
+If a Jenkins node has **2 executors**, only **2 builds** can run in **parallel**
+
+#### ***Static*** or ***Manual*** scaling
+You can have more workers during working hours or no workers outside working hours.
+
+#### ***Dynamic*** workker scaling
+You have plugins that can scale Jenkins slaves for you:
+- **The Amazon EC2 Plugin**: If your build cluster gets overloaded, the plugin will start new slave nodes automatically and if the nodes are idle, they will automatically get killed
+- **Docker Plugin**: Uses a docker host to spin up a slave container, run a Jenkins build in it and tear it down
+- **Amazon ECS Plugin**: Same as Docker Plugin, but the host is now a Docker Orchestrator, the EC2 Container Engine, which can host the docker containers and scale out when necessary
+- **DigitalOcean Plugin**: Dynamically privisions droplets to be used as Jenkins Slaves
+
+Builds can be executed on specific nodes. As nodes can be labeled.
+Example:
+```
+node(label: '<NODE_LABEL>') {
+    stage('build') {
+        [...]
+    }
+}
+```
+
+###
 
 ## End
 
