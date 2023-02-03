@@ -165,12 +165,12 @@ node {
 }
 ```
 
-- Create a new item
-- Choose Pipeline
-- Under Pileline, choose Pipeline script from SCM
-- Under SCM, choose Git
-- Give the Git Repository URL as Repository URL
-- Give the Jenkins file path as Script Path (from the root folder of the project)
+- Create a **new item**
+- Choose `Pipeline`
+- Under `Pipeline`, choose `Pipeline script from SCM`
+- Under `SCM`, choose `Git`
+- Give the **Git Repository URL** as `Repository URL`
+- Give the **Jenkins file path** as `Script Path` (from the root folder of the project)
 - Save and build
 
 You can also use Docker Pipeline plugin
@@ -215,22 +215,122 @@ node {
 }
 ```
 
-- Create a new item
-- Choose Pipeline
-- Under Pileline, choose Pipeline script from SCM
-- Under SCM, choose Git
-- Give the Git Repository URL as Repository URL
-- Give the Jenkins file path as Script Path (from the root folder of the project)
+- Create a **new item**
+- Choose `Pipeline`
+- Under `Pipeline`, choose `Pipeline script from SCM`
+- Under `SCM`, choose `Git`
+- Give the **Git Repository URL** as `Repository URL`
+- Give the **Jenkins file path** as `Script Path` (from the root folder of the project)
 - Save and build
 
 ## Jenkins Integrations
 ### Email Integration
+- Install `Email Extension Plugin` from `Dashboad > Manage Jenkins > Manage Plugins` if it's not installed already
+- Go to `Manage Jenkins > Configure System` and you can configure your Email notifications. (SMTP server configurations)
+- After the configuration, you can make specific configurations on your **Jenkins file**
+Example:
+```
+node {
 
+  // config 
+  def to = emailextrecipients([
+          [$class: 'CulpritsRecipientProvider'],
+          [$class: 'DevelopersRecipientProvider'],
+          [$class: 'RequesterRecipientProvider']
+  ])
 
+  // job
+  try {
+    stage('build') {
+      println('so far so good...')
+    }
+    stage('test') {
+      println('A test has failed!')
+      sh 'exit 1'
+    }
+  } catch(e) {
+    // mark build as failed
+    currentBuild.result = "FAILURE";
+    // set variables
+    def subject = "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} ${currentBuild.result}"
+    def content = '${JELLY_SCRIPT,template="html"}'
 
+    // send email
+    if(to != null && !to.isEmpty()) {
+      emailext(body: content, mimeType: 'text/html',
+         replyTo: '$DEFAULT_REPLYTO', subject: subject,
+         to: to, attachLog: true )
+    }
 
+    // mark current build as a failure and throw the error
+    throw e;
+  }
+}
+```
+- Create a `pipeline` job
+- Under `Pipeline`, choose `Pipeline script from SCM`
+- Under `SCM`, choose `Git`
+- Give the **Git Repository URL** as `Repository URL`
+- Give the **Jenkins file path** as `Script Path` (from the root folder of the project)
+- You can also `Poll SCM` to set timer ("H/5 * * * *" would run every 5 minutes)
+- Save and build
 
+### Slack Integration
+- Install `Slack Notification Plugin` from `Dashboad > Manage Jenkins > Manage Plugins`
+- Go to Manage `Jenkins > Configure System` and you can configure your `Global Slack Notifier Settings`
+- Make sure you have **credendial ID** for `Integration Token Credential ID`
 
+### GitHub / Bitbucket Integration
+
+#### GitHub Integration
+- Install `GitHub Branch Source Plugin` from `Dashboad > Manage Jenkins > Manage Plugins`
+- Go to `Manage Jenkins > Configure System` and you can configure your `GitHub Branch Source Plugin`
+- Create a new item as `GitHub Organization`
+- Under `Project`, add **credentials**.
+ - To add GitHub credentials, go to `GitHub > Settings > Repositories > Generate New Token`
+ - Select `repo` as `Scopes` and create the token
+- Make sure you also add **owner**
+- Since we are using Gradle as compiler, we are going to create a `.gradle` file inside our Jenkins folder
+ - `mkdir -p /var/jenkins_home/.gradle`
+ - `chown 1000:1000 /var/jenkins_home/.gradle`
+
+Example:
+```
+node {
+  def myGradleContainer = docker.image('gradle:jdk8-alpine')
+
+  myGradleContainer.pull()
+  stage('prep') {
+    checkout scm
+  }
+  stage('test') {
+     myGradleContainer.inside("-v ${env.HOME}/.gradle:/home/gradle/.gradle") {
+       sh 'cd complete && gradle test'
+     }
+  }
+  stage('run') {
+     myGradleContainer.inside("-v ${env.HOME}/.gradle:/home/gradle/.gradle") {
+       sh 'cd complete && gradle run'
+     }
+  }
+}
+```
+
+#### Bitbucket Integration
+- Install `Bitbucket Branch Source Plugin` from `Dashboad > Manage Jenkins > Manage Plugins`
+- Go to `Manage Jenkins > Configure System` and you can configure your `Bitbucket Branch Source Plugin`
+- Create a new item as `Bitbucket Team/Project`
+- Under `Project`, add **credentials**.
+ - To add credentials, go to `Bitbucket > Settings > App Passwords > Create App Password` 
+ - Would recomment to add all of the **read permissions**
+- Make sure you also add `Team ID` as **owner**
+ - Under `Project`, there is `Bitbucket Team/Project`. Do not forget to add **the team**.
+  - In Bitbucket; you can open project under team. So it goes like `<TEAM>/<PROJECT>/<REPOSITORY>`
+- Since we are using Gradle as compiler, we are going to create a `.gradle` file inside our Jenkins folder
+ - `mkdir -p /var/jenkins_home/.gradle`
+ - `chown 1000:1000 /var/jenkins_home/.gradle`
+
+ > There is a check box named `Auto-register webhooks`. If enabled, Bitbucket will send notifications to Jenkins for each commit. To do that, make sure your Jenkins URL under Manage Jenkins > Configure System.
 
 
 
