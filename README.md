@@ -287,8 +287,8 @@ node {
 - Go to `Manage Jenkins > Configure System` and you can configure your `GitHub Branch Source Plugin`
 - Create a new item as `GitHub Organization`
 - Under `Project`, add **credentials**.
- - To add GitHub credentials, go to `GitHub > Settings > Repositories > Generate New Token`
- - Select `repo` as `Scopes` and create the token
+  - To add GitHub credentials, go to `GitHub > Settings > Repositories > Generate New Token`
+  - Select `repo` as `Scopes` and create the token
 - Make sure you also add **owner**
 - Since we are using Gradle as compiler, we are going to create a `.gradle` file inside our Jenkins folder
  - `mkdir -p /var/jenkins_home/.gradle`
@@ -321,11 +321,11 @@ node {
 - Go to `Manage Jenkins > Configure System` and you can configure your `Bitbucket Branch Source Plugin`
 - Create a new item as `Bitbucket Team/Project`
 - Under `Project`, add **credentials**.
- - To add credentials, go to `Bitbucket > Settings > App Passwords > Create App Password` 
- - Would recomment to add all of the **read permissions**
+  - To add credentials, go to `Bitbucket > Settings > App Passwords > Create App Password` 
+  - Would recomment to add all of the **read permissions**
 - Make sure you also add `Team ID` as **owner**
- - Under `Project`, there is `Bitbucket Team/Project`. Do not forget to add **the team**.
-  - In Bitbucket; you can open project under team. So it goes like `<TEAM>/<PROJECT>/<REPOSITORY>`
+  - Under `Project`, there is `Bitbucket Team/Project`. Do not forget to add **the team**.
+    - In Bitbucket; you can open project under team. So it goes like `<TEAM>/<PROJECT>/<REPOSITORY>`
 - Since we are using Gradle as compiler, we are going to create a `.gradle` file inside our Jenkins folder
  - `mkdir -p /var/jenkins_home/.gradle`
  - `chown 1000:1000 /var/jenkins_home/.gradle`
@@ -355,11 +355,11 @@ for (p in jsonParse(pr.content).values) {
 ```
 - Install `HTTP Request Plugin` from `Dashboad > Manage Jenkins > Manage Plugins`
 - Create an `API Key`, we use **Bitbucket** for this example
- - Go to `Bitbucket > Settings > Access Management > OAuth`
- - Click on `Add Consumer`
- - Give a name
- - Put `Jenkins URL` as **Callback URL** and **URL**
- - Give **read permissions** for **Repositories** and **Pull Requests**
+  - Go to `Bitbucket > Settings > Access Management > OAuth`
+  - Click on `Add Consumer`
+  - Give a name
+  - Put `Jenkins URL` as **Callback URL** and **URL**
+  - Give **read permissions** for **Repositories** and **Pull Requests**
 - Go to **Credentials** and add username and password from Bitbucket
 - Create a **Pipeline** item
 - Under `Pipeline`, choose `Pipeline script from SCM`
@@ -423,8 +423,8 @@ networks:
 - `cd jenkins && docker-compose up -d`
 - Install `SonarQube Scanner for Jenkins` from `Dashboad > Manage Jenkins > Manage Plugins`
 - Open `SonarQube`, login and **generate token**
- - username/password is admin/admin for SonarQube
- - Go to `Administrator > My Account > Security` and `Generate Tokens`
+  - username/password is admin/admin for SonarQube
+  - Go to `Administrator > My Account > Security` and `Generate Tokens`
 - Go to `Dashboad > Manage Jenkins > Global Tool Configurations`
 - Add `SonarQube Scanner` as sonar
 - Go to `Dashboard > Manage Jenkins > Credentials`
